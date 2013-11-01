@@ -14,7 +14,6 @@ import javax.swing.JMenuItem;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
-import java.net.SocketException;
 
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
