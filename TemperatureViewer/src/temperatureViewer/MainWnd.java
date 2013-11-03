@@ -49,16 +49,13 @@ public class MainWnd extends JFrame {
 	public MainWnd() {
 		setTitle("Temperature Viewer");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 535, 300);
+		setBounds(100, 100, 580, 300);
 		contentPane = new JPanel();
-		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		contentPane.setBorder(new EmptyBorder(0, 0, 0, 0));
 		setContentPane(contentPane);
-		contentPane.setLayout(null);
 		
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.setBorderPainted(false);
-		menuBar.setBounds(0, 0, 527, 21);
-		contentPane.add(menuBar);
 		
 		JMenu mnFile = new JMenu("File");
 		menuBar.add(mnFile);
@@ -113,9 +110,8 @@ public class MainWnd extends JFrame {
 		mnNewMenu.add(mntmUpdate);
 		
 		JSplitPane splitPane = new JSplitPane();
-		splitPane.setResizeWeight(0.3);
-		splitPane.setBounds(0, 22, 527, 239);
-		contentPane.add(splitPane);
+		splitPane.setContinuousLayout(true);
+		splitPane.setResizeWeight(0.7);
 		
 		JTree tree = new JTree();
 		splitPane.setLeftComponent(tree);
@@ -132,5 +128,20 @@ public class MainWnd extends JFrame {
 				.addGap(0, 237, Short.MAX_VALUE)
 		);
 		panel.setLayout(gl_panel);
+		GroupLayout gl_contentPane = new GroupLayout(contentPane);
+		gl_contentPane.setHorizontalGroup(
+			gl_contentPane.createParallelGroup(Alignment.LEADING)
+				.addComponent(splitPane, Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 564, Short.MAX_VALUE)
+				.addComponent(menuBar, Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 554, Short.MAX_VALUE)
+		);
+		gl_contentPane.setVerticalGroup(
+			gl_contentPane.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_contentPane.createSequentialGroup()
+					.addComponent(menuBar, GroupLayout.PREFERRED_SIZE, 24, GroupLayout.PREFERRED_SIZE)
+					.addGap(1)
+					.addComponent(splitPane, GroupLayout.DEFAULT_SIZE, 250, Short.MAX_VALUE)
+					.addGap(0))
+		);
+		contentPane.setLayout(gl_contentPane);
 	}
 }
