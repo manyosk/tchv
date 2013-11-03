@@ -13,17 +13,28 @@ import javax.swing.JMenuItem;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.FileInputStream;
+import java.io.ObjectOutputStream;
+import java.io.FileOutputStream;
+
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 
+import temperatureViewer.FtpSettings;
+
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
 
 	private JPanel contentPane;
-
+	private SettingsData settingsData = null;
 	/**
 	 * Launch the application.
 	 */
@@ -44,6 +55,29 @@ public class MainWnd extends JFrame {
 	 * Create the frame.
 	 */
 	public MainWnd() {
+		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowOpened(WindowEvent arg0) {
+				if(settingsData == null)
+				{
+					//settingsData = new SettingsData();
+					try {
+						ObjectInputStream in = new ObjectInputStream(new FileInputStream("Settings.dat"));
+						settingsData = (SettingsData) in.readObject();
+						in.close();
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} 
+				}
+			}
+		});
 		setTitle("Temperature Viewer");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 535, 300);
@@ -75,6 +109,32 @@ public class MainWnd extends JFrame {
 		JMenuItem mntmFtpSettings = new JMenuItem("Ftp settings");
 		mntmFtpSettings.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				FtpSettings ftpSettings = new FtpSettings(MainWnd.this);
+				ftpSettings.setServerName(settingsData.getServer());
+				ftpSettings.setUserName(settingsData.getName());
+				ftpSettings.setPassword(settingsData.getPassword());
+				ftpSettings.setVisible(true);
+				if(ftpSettings.getActionCommand().equalsIgnoreCase("OK"))
+				{
+					settingsData.setName(ftpSettings.getName());
+					settingsData.setServer(ftpSettings.getServerName());
+					settingsData.setPassword(ftpSettings.getPassword());
+					
+					ObjectOutputStream out;
+					try {
+						out = new ObjectOutputStream(new FileOutputStream("Settings.dat"));
+						out.writeObject(settingsData);  
+						out.close();
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}  
+				}
+				
+				ftpSettings.dispose();
 			}
 		});
 		mnNewMenu.add(mntmFtpSettings);
