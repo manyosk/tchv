@@ -15,6 +15,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
 
+import javax.swing.JSplitPane;
+import javax.swing.JTree;
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
+
+
+
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
 
@@ -40,14 +47,16 @@ public class MainWnd extends JFrame {
 	 * Create the frame.
 	 */
 	public MainWnd() {
+		setTitle("Temperature Viewer");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 543, 300);
+		setBounds(100, 100, 535, 300);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
 		JMenuBar menuBar = new JMenuBar();
+		menuBar.setBorderPainted(false);
 		menuBar.setBounds(0, 0, 527, 21);
 		contentPane.add(menuBar);
 		
@@ -102,5 +111,26 @@ public class MainWnd extends JFrame {
 			}
 		});
 		mnNewMenu.add(mntmUpdate);
+		
+		JSplitPane splitPane = new JSplitPane();
+		splitPane.setResizeWeight(0.3);
+		splitPane.setBounds(0, 22, 527, 239);
+		contentPane.add(splitPane);
+		
+		JTree tree = new JTree();
+		splitPane.setLeftComponent(tree);
+		
+		JPanel panel = new JPanel();
+		splitPane.setRightComponent(panel);
+		GroupLayout gl_panel = new GroupLayout(panel);
+		gl_panel.setHorizontalGroup(
+			gl_panel.createParallelGroup(Alignment.LEADING)
+				.addGap(0, 448, Short.MAX_VALUE)
+		);
+		gl_panel.setVerticalGroup(
+			gl_panel.createParallelGroup(Alignment.LEADING)
+				.addGap(0, 237, Short.MAX_VALUE)
+		);
+		panel.setLayout(gl_panel);
 	}
 }
