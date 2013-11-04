@@ -27,28 +27,98 @@ import java.awt.event.ActionEvent;
 
 import javax.swing.SwingConstants;
 
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPReply;
 import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 
 import java.awt.Component;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.IOException;
 
 @SuppressWarnings("serial")
-public class FtpSettings extends JDialog {
+public class FtpSettingsWnd extends JDialog {
 
+	//Members
 	private final JPanel contentPanel = new JPanel();
+	private JCheckBox checkConnectionAutomaticallyChckbx;
 	private JTextField serverTextField;
 	private JTextField NameTextField;
 	private JPasswordField passwordField;
-	private String actionCommand;
+	private String actionCommand = "Cancel";
+	private JLabel connectionStatusLbl;
+	private JLabel conectedLbl;
+	
+	//Properties
+	public String getServerName() {
+		String str = serverTextField.getText();
+		return str;
+	}
+	public void setServerName(String serverName) {
+		this.serverTextField.setText(serverName);
+	}
+	public String getUserName() {
+		String str = NameTextField.getText();
+		return str;
+	}
+	public void setUserName(String serverName) {
+		this.NameTextField.setText(serverName);
+	}
+	public String getPassword() {
+		StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+        encryptor.setPassword("jasypt");
+        char[] input = passwordField.getPassword();
+        String str = String.valueOf(input);
+        str =  encryptor.encrypt(String.valueOf(input));
+        return str;
+	}
+	public String getOrigPassword() {
+		char[] input = passwordField.getPassword();
+		String str = String.valueOf(input);
+        return str;
+	}
+	public void setPassword(String password) {
+		if(!password.isEmpty())
+		{
+			StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+	        encryptor.setPassword("jasypt");
+	        String str = encryptor.decrypt(password);
+	        this.passwordField.setText(str);
+		}
+	}
+	public String getActionCommand() {
+		return actionCommand;
+	}
+	public void setActionCommand(String actionCommand) {
+		this.actionCommand = actionCommand;
+	}
+	public boolean getCheckConnectionAutomaticallyChckbxSelected()
+	{
+		return checkConnectionAutomaticallyChckbx.isSelected();
+	}
+	public void setCheckConnectionAutomaticallyChckbxSelected(boolean selected)
+	{
+		checkConnectionAutomaticallyChckbx.setSelected(selected);
+	}
 	
 	/**
 	 * Create the dialog.
 	 */
-	public FtpSettings(Window owner) {
-		super(owner, "FTP Settings", JDialog.DEFAULT_MODALITY_TYPE);
+	public FtpSettingsWnd(Window owner) {
+		super(owner, JDialog.DEFAULT_MODALITY_TYPE);
+		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowOpened(WindowEvent arg0) {
+				if(getCheckConnectionAutomaticallyChckbxSelected())
+				{
+					MakeConnection();
+				}
+			}
+		});
 		setTitle("FTP Settings");
 		setResizable(false);
 		setLocationRelativeTo(owner);
-		setBounds(100, 100, 613, 282);
+		setBounds(100, 100, 626, 326);
 		getContentPane().setLayout(new BorderLayout());
 		contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
 		getContentPane().add(contentPanel, BorderLayout.CENTER);
@@ -56,7 +126,7 @@ public class FtpSettings extends JDialog {
 		JPanel loginPanel = new JPanel();
 		loginPanel.setBorder(new TitledBorder(null, "Login", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		
-		JCheckBox checkConnectionAutomaticallyChckbx = new JCheckBox("Check connection automatically while open");
+		checkConnectionAutomaticallyChckbx = new JCheckBox("Make connection automatically while open");
 		
 		JPanel selectLogFilesPanel = new JPanel();
 		selectLogFilesPanel.setBorder(new TitledBorder(null, "Selected log files", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -64,13 +134,14 @@ public class FtpSettings extends JDialog {
 		gl_contentPanel.setHorizontalGroup(
 			gl_contentPanel.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_contentPanel.createSequentialGroup()
+					.addGap(0, 10, Short.MAX_VALUE)
 					.addGroup(gl_contentPanel.createParallelGroup(Alignment.LEADING)
 						.addGroup(gl_contentPanel.createSequentialGroup()
 							.addComponent(loginPanel, GroupLayout.PREFERRED_SIZE, 236, GroupLayout.PREFERRED_SIZE)
 							.addPreferredGap(ComponentPlacement.RELATED)
 							.addComponent(selectLogFilesPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
 						.addComponent(checkConnectionAutomaticallyChckbx))
-					.addContainerGap(76, Short.MAX_VALUE))
+					.addGap(15))
 		);
 		gl_contentPanel.setVerticalGroup(
 			gl_contentPanel.createParallelGroup(Alignment.LEADING)
@@ -79,9 +150,9 @@ public class FtpSettings extends JDialog {
 					.addComponent(checkConnectionAutomaticallyChckbx)
 					.addPreferredGap(ComponentPlacement.RELATED)
 					.addGroup(gl_contentPanel.createParallelGroup(Alignment.BASELINE)
-						.addComponent(loginPanel, GroupLayout.PREFERRED_SIZE, 180, GroupLayout.PREFERRED_SIZE)
-						.addComponent(selectLogFilesPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-					.addContainerGap(37, Short.MAX_VALUE))
+						.addComponent(loginPanel, GroupLayout.PREFERRED_SIZE, 212, GroupLayout.PREFERRED_SIZE)
+						.addComponent(selectLogFilesPanel, GroupLayout.PREFERRED_SIZE, 212, Short.MAX_VALUE))
+					.addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
 		);
 		
 		JList sourseList = new JList();
@@ -101,6 +172,20 @@ public class FtpSettings extends JDialog {
 		JLabel lblDestination = new JLabel("Selected destination files:");
 		
 		JLabel lblSource = new JLabel("Source files:");
+		
+		JLabel connectedStatusLbl = new JLabel("Connection status:");
+		connectedStatusLbl.setFont(new Font("Tahoma", Font.BOLD, 12));
+		
+		conectedLbl = new JLabel("Disconected");
+		conectedLbl.setForeground(Color.RED);
+		conectedLbl.setFont(new Font("Tahoma", Font.BOLD, 12));
+		
+		JButton btnConnect = new JButton("Connect");
+		btnConnect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				MakeConnection();
+			}
+		});
 		GroupLayout gl_selectLogFilesPanel = new GroupLayout(selectLogFilesPanel);
 		gl_selectLogFilesPanel.setHorizontalGroup(
 			gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
@@ -108,41 +193,50 @@ public class FtpSettings extends JDialog {
 					.addContainerGap()
 					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
 						.addGroup(gl_selectLogFilesPanel.createSequentialGroup()
-							.addComponent(sourseList, GroupLayout.PREFERRED_SIZE, 117, GroupLayout.PREFERRED_SIZE)
+							.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
+								.addGroup(gl_selectLogFilesPanel.createSequentialGroup()
+									.addComponent(sourseList, GroupLayout.PREFERRED_SIZE, 117, GroupLayout.PREFERRED_SIZE)
+									.addPreferredGap(ComponentPlacement.RELATED)
+									.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
+										.addComponent(addToListBtn)
+										.addComponent(removeFromListBtn)))
+								.addComponent(lblSource, GroupLayout.PREFERRED_SIZE, 78, GroupLayout.PREFERRED_SIZE))
 							.addPreferredGap(ComponentPlacement.RELATED)
 							.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
-								.addComponent(addToListBtn)
-								.addComponent(removeFromListBtn)))
-						.addComponent(lblSource))
-					.addPreferredGap(ComponentPlacement.UNRELATED)
-					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
-						.addComponent(lblDestination)
-						.addComponent(list, GroupLayout.PREFERRED_SIZE, 127, GroupLayout.PREFERRED_SIZE))
-					.addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+								.addComponent(lblDestination)
+								.addComponent(list, GroupLayout.PREFERRED_SIZE, 127, GroupLayout.PREFERRED_SIZE)))
+						.addGroup(gl_selectLogFilesPanel.createSequentialGroup()
+							.addComponent(connectedStatusLbl)
+							.addPreferredGap(ComponentPlacement.UNRELATED)
+							.addComponent(conectedLbl)
+							.addGap(18)
+							.addComponent(btnConnect, GroupLayout.DEFAULT_SIZE, 84, Short.MAX_VALUE)))
+					.addGap(14))
 		);
 		gl_selectLogFilesPanel.setVerticalGroup(
 			gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_selectLogFilesPanel.createSequentialGroup()
 					.addContainerGap()
-					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.TRAILING)
+					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.BASELINE)
+						.addComponent(connectedStatusLbl)
+						.addComponent(conectedLbl)
+						.addComponent(btnConnect))
+					.addGap(11)
+					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.BASELINE)
 						.addComponent(lblSource)
 						.addComponent(lblDestination))
 					.addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.LEADING, false)
-						.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.BASELINE, false)
-							.addComponent(sourseList, GroupLayout.PREFERRED_SIZE, 115, GroupLayout.PREFERRED_SIZE)
-							.addComponent(list, GroupLayout.PREFERRED_SIZE, 114, GroupLayout.PREFERRED_SIZE))
+					.addGroup(gl_selectLogFilesPanel.createParallelGroup(Alignment.TRAILING, false)
 						.addGroup(gl_selectLogFilesPanel.createSequentialGroup()
-							.addGap(33)
 							.addComponent(removeFromListBtn)
 							.addPreferredGap(ComponentPlacement.UNRELATED)
-							.addComponent(addToListBtn)))
+							.addComponent(addToListBtn)
+							.addGap(25))
+						.addComponent(sourseList, Alignment.LEADING, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+						.addComponent(list, Alignment.LEADING, GroupLayout.DEFAULT_SIZE, 113, Short.MAX_VALUE))
 					.addContainerGap())
 		);
-		gl_selectLogFilesPanel.linkSize(SwingConstants.VERTICAL, new Component[] {addToListBtn, removeFromListBtn});
-		gl_selectLogFilesPanel.linkSize(SwingConstants.VERTICAL, new Component[] {sourseList, list});
 		gl_selectLogFilesPanel.linkSize(SwingConstants.HORIZONTAL, new Component[] {addToListBtn, removeFromListBtn});
-		gl_selectLogFilesPanel.linkSize(SwingConstants.HORIZONTAL, new Component[] {sourseList, list});
 		selectLogFilesPanel.setLayout(gl_selectLogFilesPanel);
 		
 		JLabel lblServer = new JLabel("Server");
@@ -160,13 +254,17 @@ public class FtpSettings extends JDialog {
 		passwordField = new JPasswordField();
 		
 		JButton btnTestConnection = new JButton("Test connection");
+		btnTestConnection.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				TestConnection();
+			}
+		});
 		
 		JLabel lblConnection = new JLabel("Connection:");
 		lblConnection.setFont(new Font("Tahoma", Font.BOLD, 12));
-		
-		JLabel lblConnectionStatus = new JLabel("Connection Status");
-		lblConnectionStatus.setBackground(Color.RED);
-		lblConnectionStatus.setFont(new Font("Tahoma", Font.BOLD, 12));
+		connectionStatusLbl = new JLabel("...");
+		connectionStatusLbl.setForeground(Color.RED);
+		connectionStatusLbl.setFont(new Font("Tahoma", Font.BOLD, 12));
 		GroupLayout gl_loginPanel = new GroupLayout(loginPanel);
 		gl_loginPanel.setHorizontalGroup(
 			gl_loginPanel.createParallelGroup(Alignment.LEADING)
@@ -187,7 +285,7 @@ public class FtpSettings extends JDialog {
 							.addContainerGap()
 							.addComponent(lblConnection)
 							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(lblConnectionStatus))
+							.addComponent(connectionStatusLbl))
 						.addGroup(gl_loginPanel.createSequentialGroup()
 							.addGap(50)
 							.addComponent(btnTestConnection)))
@@ -210,11 +308,11 @@ public class FtpSettings extends JDialog {
 						.addComponent(passwordField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
 					.addPreferredGap(ComponentPlacement.UNRELATED)
 					.addComponent(btnTestConnection)
-					.addPreferredGap(ComponentPlacement.RELATED, 14, Short.MAX_VALUE)
+					.addPreferredGap(ComponentPlacement.RELATED, 32, Short.MAX_VALUE)
 					.addGroup(gl_loginPanel.createParallelGroup(Alignment.BASELINE)
 						.addComponent(lblConnection)
-						.addComponent(lblConnectionStatus))
-					.addContainerGap())
+						.addComponent(connectionStatusLbl))
+					.addGap(25))
 		);
 		loginPanel.setLayout(gl_loginPanel);
 		contentPanel.setLayout(gl_contentPanel);
@@ -248,40 +346,65 @@ public class FtpSettings extends JDialog {
 		}
 	}
 	
-	public String getServerName() {
-		return serverTextField.getText();
-	}
-
-	public void setServerName(String serverName) {
-		this.serverTextField.setText(serverName);
+	private void TestConnection() {
+		// TODO Auto-generated method stub
+		connectionStatusLbl.setText("...");
+		FTPClient ftpClient = new FTPClient();
+		try {
+			ftpClient.connect(getServerName());
+			int replyCode = ftpClient.getReplyCode();
+            if (!FTPReply.isPositiveCompletion(replyCode)) {
+                System.out.println("Operation failed. Server reply code: " + replyCode);
+                connectionStatusLbl.setText("Fail!");
+                return;
+            }
+            
+            ftpClient.login(getUserName(), getOrigPassword());
+            replyCode = ftpClient.getReplyCode();
+            if (!FTPReply.isPositiveCompletion(replyCode)) {
+                System.out.println("Operation failed. Server reply code: " + replyCode);
+                connectionStatusLbl.setText("Fail!");
+                return;
+            }
+            connectionStatusLbl.setText("Success");
+            
+			ftpClient.logout();
+            ftpClient.disconnect();
+		} catch (IOException ex) {
+			connectionStatusLbl.setText("Fail!");
+			System.out.println("Oops! Something wrong happened");
+            ex.printStackTrace();
+		}
 	}
 	
-	public String getUserName() {
-		return this.NameTextField.getText();
-	}
-
-	public void setUserName(String serverName) {
-		this.NameTextField.setText(serverName);
-	}
-	
-	public String getPassword() {
-		StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
-        encryptor.setPassword("jasypt");
-        return encryptor.encrypt(this.passwordField.getText());
-	}
-
-	public void setPassword(String password) {
-		StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
-        encryptor.setPassword("jasypt");
-        this.passwordField.setText(encryptor.decrypt(password));
-	}
-
-	public String getActionCommand() {
-		return actionCommand;
-	}
-
-	public void setActionCommand(String actionCommand) {
-		this.actionCommand = actionCommand;
+	private void MakeConnection() {
+		FTPClient ftpClient = new FTPClient();
+		try {
+			ftpClient.connect(getServerName());
+			int replyCode = ftpClient.getReplyCode();
+            if (!FTPReply.isPositiveCompletion(replyCode)) {
+                System.out.println("Operation failed. Server reply code: " + replyCode);
+                conectedLbl.setText("Disconnected");
+                return;
+            }
+            
+            ftpClient.login(getUserName(), getOrigPassword());
+            replyCode = ftpClient.getReplyCode();
+            if (!FTPReply.isPositiveCompletion(replyCode)) {
+                System.out.println("Operation failed. Server reply code: " + replyCode);
+                conectedLbl.setText("Disconnected");
+                return;
+            }
+            conectedLbl.setText("Connected");
+            
+			ftpClient.logout();
+            ftpClient.disconnect();
+		} catch (IOException ex) {
+			conectedLbl.setText("Disconnected");
+			System.out.println("Oops! Something wrong happened");
+            ex.printStackTrace();
+		}
+		
 	}
 }
 

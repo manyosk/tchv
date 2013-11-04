@@ -25,7 +25,7 @@ import javax.swing.JTree;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 
-import temperatureViewer.FtpSettings;
+import temperatureViewer.FtpSettingsWnd;
 
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -61,7 +61,7 @@ public class MainWnd extends JFrame {
 			public void windowOpened(WindowEvent arg0) {
 				if(settingsData == null)
 				{
-					//settingsData = new SettingsData();
+					settingsData = new SettingsData();
 					try {
 						ObjectInputStream in = new ObjectInputStream(new FileInputStream("Settings.dat"));
 						settingsData = (SettingsData) in.readObject();
@@ -81,16 +81,13 @@ public class MainWnd extends JFrame {
 		});
 		setTitle("Temperature Viewer");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 535, 300);
+		setBounds(100, 100, 799, 560);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(null);
 		
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.setBorderPainted(false);
-		menuBar.setBounds(0, 0, 527, 21);
-		contentPane.add(menuBar);
 		
 		JMenu mnFile = new JMenu("File");
 		menuBar.add(mnFile);
@@ -110,14 +107,16 @@ public class MainWnd extends JFrame {
 		JMenuItem mntmFtpSettings = new JMenuItem("Ftp settings");
 		mntmFtpSettings.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				FtpSettings ftpSettings = new FtpSettings(MainWnd.this);
+				FtpSettingsWnd ftpSettings = new FtpSettingsWnd(MainWnd.this);
+				ftpSettings.setCheckConnectionAutomaticallyChckbxSelected(settingsData.getCheckServerConnection());
 				ftpSettings.setServerName(settingsData.getServer());
-				ftpSettings.setUserName(settingsData.getName());
+				ftpSettings.setUserName(settingsData.getUserName());
 				ftpSettings.setPassword(settingsData.getPassword());
 				ftpSettings.setVisible(true);
 				if(ftpSettings.getActionCommand().equalsIgnoreCase("OK"))
 				{
-					settingsData.setName(ftpSettings.getName());
+					settingsData.setCheckServerConnection(ftpSettings.getCheckConnectionAutomaticallyChckbxSelected());
+					settingsData.setUserName(ftpSettings.getUserName());
 					settingsData.setServer(ftpSettings.getServerName());
 					settingsData.setPassword(ftpSettings.getPassword());
 					
@@ -128,9 +127,11 @@ public class MainWnd extends JFrame {
 						out.close();
 					} catch (FileNotFoundException e) {
 						// TODO Auto-generated catch block
+						System.out.println("Settings.dat file sa nenasiel ");
 						e.printStackTrace();
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
+						System.out.println("IOException - spracovanie FtpSettings-OK button.");
 						e.printStackTrace();
 					}  
 				}
@@ -172,8 +173,6 @@ public class MainWnd extends JFrame {
 		
 		JSplitPane splitPane = new JSplitPane();
 		splitPane.setResizeWeight(0.3);
-		splitPane.setBounds(0, 22, 527, 239);
-		contentPane.add(splitPane);
 		
 		JTree tree = new JTree();
 		splitPane.setLeftComponent(tree);
@@ -190,5 +189,19 @@ public class MainWnd extends JFrame {
 				.addGap(0, 237, Short.MAX_VALUE)
 		);
 		panel.setLayout(gl_panel);
+		GroupLayout gl_contentPane = new GroupLayout(contentPane);
+		gl_contentPane.setHorizontalGroup(
+			gl_contentPane.createParallelGroup(Alignment.LEADING)
+				.addComponent(menuBar, GroupLayout.DEFAULT_SIZE, 773, Short.MAX_VALUE)
+				.addComponent(splitPane, GroupLayout.DEFAULT_SIZE, 773, Short.MAX_VALUE)
+		);
+		gl_contentPane.setVerticalGroup(
+			gl_contentPane.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_contentPane.createSequentialGroup()
+					.addComponent(menuBar, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+					.addGap(1)
+					.addComponent(splitPane, GroupLayout.DEFAULT_SIZE, 489, Short.MAX_VALUE))
+		);
+		contentPane.setLayout(gl_contentPane);
 	}
 }
