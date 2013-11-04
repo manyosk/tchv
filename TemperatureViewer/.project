@@ -18,7 +18,7 @@
 		<link>
 			<name>lib/commons-net-3.1.jar</name>
 			<type>1</type>
-			<location>C:/Users/Marian/git/manyo/TemperatureViewer/lib/commons-net-3.1.jar</location>
+			<location>PROJECT_LOC/lib/commons-net-3.1.jar</location>
 		</link>
 	</linkedResources>
 </projectDescription>

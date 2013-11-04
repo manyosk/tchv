@@ -13,20 +13,28 @@ import javax.swing.JMenuItem;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.FileInputStream;
+import java.io.ObjectOutputStream;
+import java.io.FileOutputStream;
 
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 
+import temperatureViewer.FtpSettings;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
 
 	private JPanel contentPane;
-
+	private SettingsData settingsData = null;
 	/**
 	 * Launch the application.
 	 */
@@ -48,14 +56,41 @@ public class MainWnd extends JFrame {
 	 */
 	public MainWnd() {
 		setTitle("Temperature Viewer");
+		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowOpened(WindowEvent arg0) {
+				if(settingsData == null)
+				{
+					//settingsData = new SettingsData();
+					try {
+						ObjectInputStream in = new ObjectInputStream(new FileInputStream("Settings.dat"));
+						settingsData = (SettingsData) in.readObject();
+						in.close();
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} 
+				}
+			}
+		});
+		setTitle("Temperature Viewer");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 580, 300);
+		setBounds(100, 100, 535, 300);
 		contentPane = new JPanel();
-		contentPane.setBorder(new EmptyBorder(0, 0, 0, 0));
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
+		contentPane.setLayout(null);
 		
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.setBorderPainted(false);
+		menuBar.setBounds(0, 0, 527, 21);
+		contentPane.add(menuBar);
 		
 		JMenu mnFile = new JMenu("File");
 		menuBar.add(mnFile);
@@ -75,6 +110,32 @@ public class MainWnd extends JFrame {
 		JMenuItem mntmFtpSettings = new JMenuItem("Ftp settings");
 		mntmFtpSettings.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				FtpSettings ftpSettings = new FtpSettings(MainWnd.this);
+				ftpSettings.setServerName(settingsData.getServer());
+				ftpSettings.setUserName(settingsData.getName());
+				ftpSettings.setPassword(settingsData.getPassword());
+				ftpSettings.setVisible(true);
+				if(ftpSettings.getActionCommand().equalsIgnoreCase("OK"))
+				{
+					settingsData.setName(ftpSettings.getName());
+					settingsData.setServer(ftpSettings.getServerName());
+					settingsData.setPassword(ftpSettings.getPassword());
+					
+					ObjectOutputStream out;
+					try {
+						out = new ObjectOutputStream(new FileOutputStream("Settings.dat"));
+						out.writeObject(settingsData);  
+						out.close();
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}  
+				}
+				
+				ftpSettings.dispose();
 			}
 		});
 		mnNewMenu.add(mntmFtpSettings);
@@ -110,8 +171,9 @@ public class MainWnd extends JFrame {
 		mnNewMenu.add(mntmUpdate);
 		
 		JSplitPane splitPane = new JSplitPane();
-		splitPane.setContinuousLayout(true);
-		splitPane.setResizeWeight(0.7);
+		splitPane.setResizeWeight(0.3);
+		splitPane.setBounds(0, 22, 527, 239);
+		contentPane.add(splitPane);
 		
 		JTree tree = new JTree();
 		splitPane.setLeftComponent(tree);
@@ -128,20 +190,5 @@ public class MainWnd extends JFrame {
 				.addGap(0, 237, Short.MAX_VALUE)
 		);
 		panel.setLayout(gl_panel);
-		GroupLayout gl_contentPane = new GroupLayout(contentPane);
-		gl_contentPane.setHorizontalGroup(
-			gl_contentPane.createParallelGroup(Alignment.LEADING)
-				.addComponent(splitPane, Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 564, Short.MAX_VALUE)
-				.addComponent(menuBar, Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 554, Short.MAX_VALUE)
-		);
-		gl_contentPane.setVerticalGroup(
-			gl_contentPane.createParallelGroup(Alignment.LEADING)
-				.addGroup(gl_contentPane.createSequentialGroup()
-					.addComponent(menuBar, GroupLayout.PREFERRED_SIZE, 24, GroupLayout.PREFERRED_SIZE)
-					.addGap(1)
-					.addComponent(splitPane, GroupLayout.DEFAULT_SIZE, 250, Short.MAX_VALUE)
-					.addGap(0))
-		);
-		contentPane.setLayout(gl_contentPane);
 	}
 }
