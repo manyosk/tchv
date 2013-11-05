@@ -14,4 +14,11 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>lib/commons-net-3.1.jar</name>
+			<type>1</type>
+			<location>PROJECT_LOC/lib/commons-net-3.1.jar</location>
+		</link>
+	</linkedResources>
 </projectDescription>
