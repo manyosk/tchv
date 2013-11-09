@@ -1,34 +1,30 @@
 package temperatureViewer;
 
 import java.awt.EventQueue;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
-import org.apache.commons.net.ftp.*;
-
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
 import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.FileInputStream;
-import java.io.ObjectOutputStream;
-import java.io.FileOutputStream;
-
+import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
-import javax.swing.GroupLayout;
-import javax.swing.GroupLayout.Alignment;
+import javax.swing.border.EmptyBorder;
 
-import temperatureViewer.FtpSettingsWnd;
-
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPReply;
 
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
@@ -63,7 +59,7 @@ public class MainWnd extends JFrame {
 				{
 					settingsData = new SettingsData();
 					try {
-						ObjectInputStream in = new ObjectInputStream(new FileInputStream("Settings.dat"));
+						ObjectInputStream in = new ObjectInputStream(new FileInputStream("Data/Settings.dat"));
 						settingsData = (SettingsData) in.readObject();
 						in.close();
 					} catch (FileNotFoundException e) {
@@ -112,6 +108,7 @@ public class MainWnd extends JFrame {
 				ftpSettings.setServerName(settingsData.getServer());
 				ftpSettings.setUserName(settingsData.getUserName());
 				ftpSettings.setPassword(settingsData.getPassword());
+				ftpSettings.setLogFileList(settingsData.getLogFileList());
 				ftpSettings.setVisible(true);
 				if(ftpSettings.getActionCommand().equalsIgnoreCase("OK"))
 				{
@@ -119,10 +116,11 @@ public class MainWnd extends JFrame {
 					settingsData.setUserName(ftpSettings.getUserName());
 					settingsData.setServer(ftpSettings.getServerName());
 					settingsData.setPassword(ftpSettings.getPassword());
+					settingsData.setLogFileList(ftpSettings.getLogFileList());
 					
 					ObjectOutputStream out;
 					try {
-						out = new ObjectOutputStream(new FileOutputStream("Settings.dat"));
+						out = new ObjectOutputStream(new FileOutputStream("Data/Settings.dat"));
 						out.writeObject(settingsData);  
 						out.close();
 					} catch (FileNotFoundException e) {
