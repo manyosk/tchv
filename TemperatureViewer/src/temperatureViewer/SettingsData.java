@@ -1,6 +1,8 @@
 package temperatureViewer;
 
 import java.io.Serializable;
+import java.util.List;
+import temperatureViewer.FileListBoxItem;
 
 public class SettingsData implements Serializable {
 	/**
@@ -11,6 +13,7 @@ public class SettingsData implements Serializable {
 	private String  server = "";
 	private String  userName = "";
 	private String  password = "";
+	private List<FileListBoxItem>    logFileList = null;
 	
 	//Properties
 	public String getServer() {
@@ -36,6 +39,12 @@ public class SettingsData implements Serializable {
 	}
 	public void setCheckServerConnection(boolean checkServerConnection) {
 		this.checkServerConnection = checkServerConnection;
+	}
+	public List<FileListBoxItem> getLogFileList() {
+		return logFileList;
+	}
+	public void setLogFileList(List<FileListBoxItem> logFileList) {
+		this.logFileList = logFileList;
 	}
 
 }
