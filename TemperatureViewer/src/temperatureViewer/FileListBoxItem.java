@@ -12,6 +12,7 @@ class FileListBoxItem implements Serializable
 	String fileFullPath;
 	String fileName;
 	boolean isDirectory;
+	long   position;
 	
 	FileListBoxItem(String strName, String strPath, boolean isDir)
 	{
@@ -30,6 +31,7 @@ class FileListBoxItem implements Serializable
 		filePath     = strPath;
 		fileName     = strName;
 		isDirectory  = isDir;
+		position     = 0;
 	}
 	
 	public String toString()

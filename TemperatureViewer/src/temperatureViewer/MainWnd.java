@@ -5,12 +5,16 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
@@ -23,8 +27,10 @@ import javax.swing.JSplitPane;
 import javax.swing.JTree;
 import javax.swing.border.EmptyBorder;
 
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
+import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
@@ -144,23 +150,63 @@ public class MainWnd extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				FTPClient ftpClient = new FTPClient();
 				try {
-					ftpClient.connect("10.165.129.21");
+					ftpClient.connect(settingsData.getServer());
 					int replyCode = ftpClient.getReplyCode();
 		            if (!FTPReply.isPositiveCompletion(replyCode)) {
 		                System.out.println("Operation failed. Server reply code: " + replyCode);
 		                return;
 		            }
 		            
-		            ftpClient.login("skmaryb", "GkmhajSb");
+		            StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+		            encryptor.setPassword("jasypt");
+		            String str =  encryptor.decrypt(settingsData.getPassword());
+		            
+		            
+		            ftpClient.login(settingsData.getUserName(), str);
 		            replyCode = ftpClient.getReplyCode();
 		            if (!FTPReply.isPositiveCompletion(replyCode)) {
 		                System.out.println("Operation failed. Server reply code: " + replyCode);
 		                return;
 		            }
 		            
+		            ftpClient.enterLocalPassiveMode();
+                    ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+                    
+		            for(FileListBoxItem item : settingsData.getLogFileList())
+			        {
+		            	ftpClient.setRestartOffset(item.position);
+	                    String remoteFile2 = "/" + item.fileFullPath;
+	                    File downloadFile2 = new File(item.fileName);
+	                    OutputStream outputStream2 = new BufferedOutputStream(new FileOutputStream(downloadFile2));
+	                    InputStream inputStream = ftpClient.retrieveFileStream(remoteFile2);
+	                    byte[] bytesArray = new byte[4096];
+	                    int bytesRead = -1;
+	                    while ((bytesRead = inputStream.read(bytesArray)) != -1) 
+	                    {
+	                    	item.position += bytesRead;
+	                        outputStream2.write(bytesArray, 0, bytesRead);
+	                    }
+	         
+	                    boolean success = ftpClient.completePendingCommand();
+	                    if (success) 
+	                    {
+	                        System.out.println("File #2 has been downloaded successfully.");
+	                    }
+	                    outputStream2.close();
+	                    inputStream.close();     
+			        } 
 		            
-					ftpClient.logout();
-		            ftpClient.disconnect();
+		            ObjectOutputStream out;
+					out = new ObjectOutputStream(new FileOutputStream("Data/Settings.dat"));
+					out.writeObject(settingsData);  
+					out.close();
+						
+		            if (ftpClient.isConnected()) 
+		            {
+		            	ftpClient.logout();
+		            	ftpClient.disconnect();
+		            }
+		            
 				} catch (IOException ex) {
 					System.out.println("Oops! Something wrong happened");
 		            ex.printStackTrace();
