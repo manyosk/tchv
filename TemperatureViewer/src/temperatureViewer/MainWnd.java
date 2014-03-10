@@ -5,16 +5,19 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
@@ -31,6 +34,8 @@ import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
+
+import au.com.bytecode.opencsv.CSVWriter;
 
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
@@ -169,22 +174,26 @@ public class MainWnd extends JFrame {
 		                return;
 		            }
 		            
+		            
 		            ftpClient.enterLocalPassiveMode();
                     ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
                     
 		            for(FileListBoxItem item : settingsData.getLogFileList())
 			        {
+		            	String strData = "";
 		            	ftpClient.setRestartOffset(item.position);
-	                    String remoteFile2 = "/" + item.fileFullPath;
-	                    File downloadFile2 = new File(item.fileName);
-	                    OutputStream outputStream2 = new BufferedOutputStream(new FileOutputStream(downloadFile2));
+	                    String remoteFile2 = item.fileFullPath;
+	                    //File downloadFile2 = new File(item.fileName);
+	                    //OutputStream outputStream2 = new BufferedOutputStream(new FileOutputStream(downloadFile2));
 	                    InputStream inputStream = ftpClient.retrieveFileStream(remoteFile2);
+	                    
 	                    byte[] bytesArray = new byte[4096];
 	                    int bytesRead = -1;
-	                    while ((bytesRead = inputStream.read(bytesArray)) != -1) 
+	                    while(null != inputStream && (bytesRead = inputStream.read(bytesArray)) != -1) 
 	                    {
 	                    	item.position += bytesRead;
-	                        outputStream2.write(bytesArray, 0, bytesRead);
+	                        //outputStream2.write(bytesArray, 0, bytesRead);
+	                    	strData += new String(bytesArray);
 	                    }
 	         
 	                    boolean success = ftpClient.completePendingCommand();
@@ -192,8 +201,59 @@ public class MainWnd extends JFrame {
 	                    {
 	                        System.out.println("File #2 has been downloaded successfully.");
 	                    }
-	                    outputStream2.close();
-	                    inputStream.close();     
+	                    //outputStream2.close();
+	                    inputStream.close();    
+	                    
+	                    
+	                    String[] inputLines = strData.split(System.getProperty("line.separator"));	
+	                    List<String[]> cvsFileLines = new ArrayList<String[]>();
+	                    Path path = Paths.get("Data/" + item.fileName);
+	                    if (Files.notExists(path)) 
+	                    {
+		                       
+		                    String[] parsedLine = inputLines[0].split(";");
+		                    String strLine = "Date";
+		                    
+		                    for(Integer i = 2; i < parsedLine.length; ++i)
+		                    {
+		                    	//Teplota jedalen=25.6 C
+		                    	String[] strTmp = parsedLine[i].trim().split("=");
+		                    	if(strTmp.length == 2 && strTmp[1].split(" ").length == 2 && strTmp[1].trim().split(" ")[1].compareToIgnoreCase("C") == 0)
+		                    	{
+		                    		strLine += ";" + parsedLine[i].trim().split("=")[0];
+		                    	}
+		                    }
+		                    cvsFileLines.add(strLine.split(";"));
+	                    }
+	                    
+	                    for(Integer ii = 0; ii < inputLines.length; ++ii)
+	                    {
+	                    	String[] parsedLine = inputLines[ii].split(";");
+	                    	if(parsedLine.length <= 1)
+	                    	{
+	                    		continue;
+	                    	}
+		                    String strLine = parsedLine[0].trim() + " " + parsedLine[1].trim();
+		                    
+		                    //SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+		                    //Date date = sdf.parse(parsedLine[0].trim() + " " + parsedLine[1].trim());
+		                    
+		                    for(Integer i = 2; i < parsedLine.length; ++i)
+		                    {
+		                    	//Teplota jedalen=25.6 C
+		                    	String[] strTmp = parsedLine[i].trim().split("=");
+		                    	if(strTmp.length == 2 && strTmp[1].split(" ").length == 2 && strTmp[1].trim().split(" ")[1].compareToIgnoreCase("C") == 0)
+		                    	{
+		                    		strLine += ";" + strTmp[1].trim().split(" ")[0];
+		                    	}
+		                    }
+		                    cvsFileLines.add(strLine.split(";"));
+	                    }
+	                    
+	                    CSVWriter writer = new CSVWriter(new FileWriter("Data/" + item.fileFullPath, true), ';',' ');
+	                    writer.writeAll(cvsFileLines);
+	                    writer.close();
+	                             
 			        } 
 		            
 		            ObjectOutputStream out;
@@ -211,6 +271,11 @@ public class MainWnd extends JFrame {
 					System.out.println("Oops! Something wrong happened");
 		            ex.printStackTrace();
 				}
+				/*catch (ParseException e1) 
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}*/
 			}
 		});
 		mnNewMenu.add(mntmUpdate);
