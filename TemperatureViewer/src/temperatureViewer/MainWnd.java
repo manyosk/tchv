@@ -8,9 +8,11 @@ import java.awt.event.WindowEvent;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.file.Files;
@@ -29,12 +31,16 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
 import javax.swing.border.EmptyBorder;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 
+import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
 @SuppressWarnings("serial")
@@ -42,6 +48,7 @@ public class MainWnd extends JFrame {
 
 	private JPanel contentPane;
 	private SettingsData settingsData = null;
+	private JTree tree = null;
 	/**
 	 * Launch the application.
 	 */
@@ -73,6 +80,8 @@ public class MainWnd extends JFrame {
 						ObjectInputStream in = new ObjectInputStream(new FileInputStream("Data/Settings.dat"));
 						settingsData = (SettingsData) in.readObject();
 						in.close();
+						
+						FillTree();
 					} catch (FileNotFoundException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -283,7 +292,33 @@ public class MainWnd extends JFrame {
 		JSplitPane splitPane = new JSplitPane();
 		splitPane.setResizeWeight(0.3);
 		
-		JTree tree = new JTree();
+		tree = new JTree();
+		tree.setModel(new DefaultTreeModel(
+			new DefaultMutableTreeNode("JTree") {
+				{
+					DefaultMutableTreeNode node_1;
+					node_1 = new DefaultMutableTreeNode("colors");
+						node_1.add(new DefaultMutableTreeNode("blue"));
+						node_1.add(new DefaultMutableTreeNode("violet"));
+						node_1.add(new DefaultMutableTreeNode("red"));
+						node_1.add(new DefaultMutableTreeNode("yellow"));
+					add(node_1);
+					node_1 = new DefaultMutableTreeNode("sports");
+						node_1.add(new DefaultMutableTreeNode("basketball"));
+						node_1.add(new DefaultMutableTreeNode("soccer"));
+						node_1.add(new DefaultMutableTreeNode("football"));
+						node_1.add(new DefaultMutableTreeNode("hockey"));
+					add(node_1);
+					node_1 = new DefaultMutableTreeNode("food");
+						node_1.add(new DefaultMutableTreeNode("hot dogs"));
+						node_1.add(new DefaultMutableTreeNode("pizza"));
+						node_1.add(new DefaultMutableTreeNode("ravioli"));
+						node_1.add(new DefaultMutableTreeNode("bananas"));
+					add(node_1);
+				}
+			}
+		));
+		tree.setShowsRootHandles(true);
 		splitPane.setLeftComponent(tree);
 		
 		JPanel panel = new JPanel();
@@ -312,5 +347,48 @@ public class MainWnd extends JFrame {
 					.addComponent(splitPane, GroupLayout.DEFAULT_SIZE, 489, Short.MAX_VALUE))
 		);
 		contentPane.setLayout(gl_contentPane);
+	}
+
+	protected void FillTree() 
+	{
+		try
+		{
+			if(settingsData != null && tree != null)
+			{
+				tree.removeAll();
+				
+				DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
+				List<FileListBoxItem> lLogFileList = settingsData.getLogFileList();
+				for(FileListBoxItem item : lLogFileList)
+				{
+					DefaultMutableTreeNode tmpNode = new DefaultMutableTreeNode(item.fileName);
+					CSVReader reader = new CSVReader(new FileReader("Data/" + item.fileName), ';');
+					String [] header = reader.readNext();
+				    reader.close();
+				    for(Integer i=1; i < header.length; ++i)
+				    {
+				    	DefaultMutableTreeNode tmpNode2 = new DefaultMutableTreeNode(header[i]);
+				    	tmpNode.add(tmpNode2);
+				    }
+				    
+			        root.add(tmpNode);
+			        
+				}
+				tree.setModel(new DefaultTreeModel(root));
+				
+			}
+			
+		
+		} 
+		catch (FileNotFoundException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (IOException e1) 
+		{
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 	}
 }
