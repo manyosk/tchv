@@ -12,7 +12,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.file.Files;
@@ -33,7 +32,9 @@ import javax.swing.JTree;
 import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeModel;
+
+
+import javax.swing.tree.TreeSelectionModel;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -42,6 +43,12 @@ import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
+
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.border.LineBorder;
+
+import java.awt.Color;
 
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
@@ -293,31 +300,32 @@ public class MainWnd extends JFrame {
 		splitPane.setResizeWeight(0.3);
 		
 		tree = new JTree();
-		tree.setModel(new DefaultTreeModel(
-			new DefaultMutableTreeNode("JTree") {
-				{
-					DefaultMutableTreeNode node_1;
-					node_1 = new DefaultMutableTreeNode("colors");
-						node_1.add(new DefaultMutableTreeNode("blue"));
-						node_1.add(new DefaultMutableTreeNode("violet"));
-						node_1.add(new DefaultMutableTreeNode("red"));
-						node_1.add(new DefaultMutableTreeNode("yellow"));
-					add(node_1);
-					node_1 = new DefaultMutableTreeNode("sports");
-						node_1.add(new DefaultMutableTreeNode("basketball"));
-						node_1.add(new DefaultMutableTreeNode("soccer"));
-						node_1.add(new DefaultMutableTreeNode("football"));
-						node_1.add(new DefaultMutableTreeNode("hockey"));
-					add(node_1);
-					node_1 = new DefaultMutableTreeNode("food");
-						node_1.add(new DefaultMutableTreeNode("hot dogs"));
-						node_1.add(new DefaultMutableTreeNode("pizza"));
-						node_1.add(new DefaultMutableTreeNode("ravioli"));
-						node_1.add(new DefaultMutableTreeNode("bananas"));
-					add(node_1);
-				}
+		tree.setBorder(new LineBorder(new Color(0, 0, 0)));
+		tree.addTreeSelectionListener(new TreeSelectionListener() {
+			public void valueChanged(TreeSelectionEvent e) {
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode)
+                        tree.getLastSelectedPathComponent();
+
+			 /* if nothing is selected */ 
+			     if (node == null) return;
+			
+			 /* retrieve the node that was selected */ 
+			     TreeUserObject treeUserObject = (TreeUserObject) node.getUserObject();
+			     if(treeUserObject != null && treeUserObject.getTreeLevel() == 2)
+			     {
+			    	 UpdateChart();
+			     }
 			}
-		));
+
+			private void UpdateChart() 
+			{
+				int i=10;
+				i++;
+				
+			}
+		});
+		tree.setRootVisible(false);
+		tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		tree.setShowsRootHandles(true);
 		splitPane.setLeftComponent(tree);
 		
@@ -357,17 +365,19 @@ public class MainWnd extends JFrame {
 			{
 				tree.removeAll();
 				
-				DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
+				DefaultMutableTreeNode root = new DefaultMutableTreeNode(new TreeUserObject(0, "Root"));
 				List<FileListBoxItem> lLogFileList = settingsData.getLogFileList();
 				for(FileListBoxItem item : lLogFileList)
 				{
-					DefaultMutableTreeNode tmpNode = new DefaultMutableTreeNode(item.fileName);
+					DefaultMutableTreeNode tmpNode = new DefaultMutableTreeNode(new TreeUserObject(1, item.fileName));
+					//tmpNode.setUserObject(null);
 					CSVReader reader = new CSVReader(new FileReader("Data/" + item.fileName), ';');
 					String [] header = reader.readNext();
 				    reader.close();
 				    for(Integer i=1; i < header.length; ++i)
 				    {
-				    	DefaultMutableTreeNode tmpNode2 = new DefaultMutableTreeNode(header[i]);
+				    	DefaultMutableTreeNode tmpNode2 = new DefaultMutableTreeNode(new TreeUserObject(2, header[i]));
+				    	//tmpNode2.setUserObject(item.fileName);
 				    	tmpNode.add(tmpNode2);
 				    }
 				    
