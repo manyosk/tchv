@@ -17,7 +17,10 @@ import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+
 import java.util.List;
 
 import javax.swing.GroupLayout;
@@ -50,12 +53,14 @@ import javax.swing.border.LineBorder;
 
 import java.awt.Color;
 
+
 @SuppressWarnings("serial")
 public class MainWnd extends JFrame {
 
 	private JPanel contentPane;
 	private SettingsData settingsData = null;
 	private JTree tree = null;
+	private ChartViewPanel chartViewPanel = null;
 	/**
 	 * Launch the application.
 	 */
@@ -249,7 +254,7 @@ public class MainWnd extends JFrame {
 	                    	{
 	                    		continue;
 	                    	}
-		                    String strLine = parsedLine[0].trim() + " " + parsedLine[1].trim();
+		                    String strLine = parsedLine[0].trim() + "-" + parsedLine[1].trim();
 		                    
 		                    //SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 		                    //Date date = sdf.parse(parsedLine[0].trim() + " " + parsedLine[1].trim());
@@ -266,7 +271,7 @@ public class MainWnd extends JFrame {
 		                    cvsFileLines.add(strLine.split(";"));
 	                    }
 	                    
-	                    CSVWriter writer = new CSVWriter(new FileWriter("Data/" + item.fileFullPath, true), ';',' ');
+	                    CSVWriter writer = new CSVWriter(new FileWriter("Data/" + item.fileFullPath, true), ';');
 	                    writer.writeAll(cvsFileLines);
 	                    writer.close();
 	                             
@@ -313,14 +318,78 @@ public class MainWnd extends JFrame {
 			     TreeUserObject treeUserObject = (TreeUserObject) node.getUserObject();
 			     if(treeUserObject != null && treeUserObject.getTreeLevel() == 2)
 			     {
-			    	 UpdateChart();
+			    	 DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) node.getParent();
+			    	 TreeUserObject parentUserObject = (TreeUserObject) treeNode.getUserObject();
+			    	 UpdateChart(parentUserObject.getTreeNodeName(), treeUserObject.getTreeNodeName());
 			     }
 			}
 
-			private void UpdateChart() 
+			private void UpdateChart(String strLogFileName, String strCollumnName) 
 			{
-				int i=10;
-				i++;
+				try 
+				{
+					
+				
+					if(strLogFileName.isEmpty() || strCollumnName.isEmpty())
+					{
+						return;
+					}
+					
+					int iIndex = 0;
+					String [] header = null;
+					String [] nextLine = null;
+					CSVReader reader = new CSVReader(new FileReader("Data/" + strLogFileName), ';');
+					
+					header = reader.readNext();
+					for(Integer i=1; i < header.length; ++i)
+				    {
+				    	if(header[i].trim().compareToIgnoreCase(strCollumnName) == 0)
+				    	{
+				    		iIndex = i;
+				    		break;
+				    	}
+				    }
+					
+					int iCounter = 0;
+					int iMinRangeSliderRange = 0;
+					int iMaxRangeSliderRange = 1000;
+					SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss");
+                    //Date date = sdf.parse(parsedLine[0].trim() + " " + parsedLine[1].trim());
+					while ((nextLine = reader.readNext()) != null) 
+					{
+						if(nextLine[0].isEmpty())
+						{
+							continue;
+						}
+						if(iCounter == 0)
+						{
+							//Date date = sdf.parse(nextLine[0].trim());
+							//Calendar calendar = new GregorianCalendar();
+							//calendar.setTime(date.get);
+							iMinRangeSliderRange = 0; 
+							
+						}
+						++iCounter;
+				    }
+					reader.close();
+					
+					chartViewPanel.SetRangeSliderRange(iMinRangeSliderRange, iMaxRangeSliderRange);
+				} 
+				/*catch (ParseException ee)
+				{
+					// TODO Auto-generated catch block
+					ee.printStackTrace();
+				}*/
+				catch (FileNotFoundException e)
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				catch (IOException e)
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				
 			}
 		});
@@ -329,18 +398,26 @@ public class MainWnd extends JFrame {
 		tree.setShowsRootHandles(true);
 		splitPane.setLeftComponent(tree);
 		
-		JPanel panel = new JPanel();
-		splitPane.setRightComponent(panel);
-		GroupLayout gl_panel = new GroupLayout(panel);
-		gl_panel.setHorizontalGroup(
-			gl_panel.createParallelGroup(Alignment.LEADING)
-				.addGap(0, 448, Short.MAX_VALUE)
+		JPanel rightSplitedPanePanel = new JPanel();
+		splitPane.setRightComponent(rightSplitedPanePanel);
+		
+		chartViewPanel = new ChartViewPanel();
+		GroupLayout gl_rightSplitedPanePanel = new GroupLayout(rightSplitedPanePanel);
+		gl_rightSplitedPanePanel.setHorizontalGroup(
+			gl_rightSplitedPanePanel.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_rightSplitedPanePanel.createSequentialGroup()
+					.addContainerGap()
+					.addComponent(chartViewPanel, GroupLayout.DEFAULT_SIZE, 655, Short.MAX_VALUE)
+					.addGap(17))
 		);
-		gl_panel.setVerticalGroup(
-			gl_panel.createParallelGroup(Alignment.LEADING)
-				.addGap(0, 237, Short.MAX_VALUE)
+		gl_rightSplitedPanePanel.setVerticalGroup(
+			gl_rightSplitedPanePanel.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_rightSplitedPanePanel.createSequentialGroup()
+					.addContainerGap()
+					.addComponent(chartViewPanel, GroupLayout.DEFAULT_SIZE, 464, Short.MAX_VALUE)
+					.addGap(12))
 		);
-		panel.setLayout(gl_panel);
+		rightSplitedPanePanel.setLayout(gl_rightSplitedPanePanel);
 		GroupLayout gl_contentPane = new GroupLayout(contentPane);
 		gl_contentPane.setHorizontalGroup(
 			gl_contentPane.createParallelGroup(Alignment.LEADING)
