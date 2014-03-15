@@ -17,10 +17,10 @@ import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-
+import java.util.Date;
 import java.util.List;
 
 import javax.swing.GroupLayout;
@@ -43,6 +43,13 @@ import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.time.Day;
+import org.jfree.data.time.Minute;
+import org.jfree.data.time.Second;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
 
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
@@ -109,7 +116,7 @@ public class MainWnd extends JFrame {
 		});
 		setTitle("Temperature Viewer");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 799, 560);
+		setBounds(100, 100, 831, 560);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -302,7 +309,7 @@ public class MainWnd extends JFrame {
 		mnNewMenu.add(mntmUpdate);
 		
 		JSplitPane splitPane = new JSplitPane();
-		splitPane.setResizeWeight(0.3);
+		splitPane.setResizeWeight(0.9);
 		
 		tree = new JTree();
 		tree.setBorder(new LineBorder(new Color(0, 0, 0)));
@@ -336,44 +343,79 @@ public class MainWnd extends JFrame {
 					}
 					
 					int iIndex = 0;
-					String [] header = null;
-					String [] nextLine = null;
+					String [] csvFileLine = null;
 					CSVReader reader = new CSVReader(new FileReader("Data/" + strLogFileName), ';');
 					
-					header = reader.readNext();
-					for(Integer i=1; i < header.length; ++i)
+					//read header
+					csvFileLine = reader.readNext();
+					for(Integer i=1; i < csvFileLine.length; ++i)
 				    {
-				    	if(header[i].trim().compareToIgnoreCase(strCollumnName) == 0)
+				    	if(csvFileLine[i].trim().compareToIgnoreCase(strCollumnName) == 0)
 				    	{
 				    		iIndex = i;
 				    		break;
 				    	}
 				    }
 					
-					int iCounter = 0;
+					
 					int iMinRangeSliderRange = 0;
-					int iMaxRangeSliderRange = 1000;
+					
 					SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss");
-                    //Date date = sdf.parse(parsedLine[0].trim() + " " + parsedLine[1].trim());
-					while ((nextLine = reader.readNext()) != null) 
+					
+					//read first line
+					double minTemp = 0.0;
+					double maxTemp = 0.0;
+					double avgTemp = 0.0;
+					double dTmp = 0.0;
+					int    iCount = 0;
+					
+					TimeSeries pop = new TimeSeries("Population", org.jfree.data.time.Second.class);
+					csvFileLine = reader.readNext();
+					Date date = sdf.parse(csvFileLine[0].trim());
+					long lTime = (date.getTime() / 1000) - 1262300400;
+					iMinRangeSliderRange = (int) lTime;
+					
+					dTmp = Double.parseDouble((csvFileLine[iIndex].trim()));
+					minTemp = dTmp;
+					maxTemp = dTmp;
+					avgTemp = dTmp;
+					
+					pop.add(new Second(date), dTmp);
+					++iCount;
+						
+					while ((csvFileLine = reader.readNext()) != null) 
 					{
-						if(nextLine[0].isEmpty())
+						date = sdf.parse(csvFileLine[0].trim());
+						lTime = (date.getTime() / 1000) - 1262300400;
+						dTmp = Double.parseDouble((csvFileLine[iIndex].trim()));
+						
+						pop.addOrUpdate(new Second(date), dTmp);
+						
+						++iCount;
+						if(minTemp > dTmp)
 						{
-							continue;
+							minTemp = dTmp;
 						}
-						if(iCounter == 0)
+					
+						if(maxTemp < dTmp)
 						{
-							//Date date = sdf.parse(nextLine[0].trim());
-							//Calendar calendar = new GregorianCalendar();
-							//calendar.setTime(date.get);
-							iMinRangeSliderRange = 0; 
-							
+							maxTemp = dTmp;
 						}
-						++iCounter;
+						
+						avgTemp += dTmp;
+						
 				    }
+					
+					avgTemp /= iCount;
 					reader.close();
 					
-					chartViewPanel.SetRangeSliderRange(iMinRangeSliderRange, iMaxRangeSliderRange);
+					chartViewPanel.SetRangeSliderRange(iMinRangeSliderRange, (int) lTime);
+					chartViewPanel.SetTemperatureData(minTemp, maxTemp, avgTemp);
+					
+					TimeSeriesCollection dataset = new TimeSeriesCollection();
+					dataset.addSeries(pop);
+					
+					chartViewPanel.DisplayChart(dataset);
 				} 
 				/*catch (ParseException ee)
 				{
@@ -386,6 +428,11 @@ public class MainWnd extends JFrame {
 					e.printStackTrace();
 				}
 				catch (IOException e)
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				catch (ParseException e)
 				{
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -407,8 +454,8 @@ public class MainWnd extends JFrame {
 			gl_rightSplitedPanePanel.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_rightSplitedPanePanel.createSequentialGroup()
 					.addContainerGap()
-					.addComponent(chartViewPanel, GroupLayout.DEFAULT_SIZE, 655, Short.MAX_VALUE)
-					.addGap(17))
+					.addComponent(chartViewPanel, GroupLayout.DEFAULT_SIZE, 796, Short.MAX_VALUE)
+					.addContainerGap())
 		);
 		gl_rightSplitedPanePanel.setVerticalGroup(
 			gl_rightSplitedPanePanel.createParallelGroup(Alignment.LEADING)
