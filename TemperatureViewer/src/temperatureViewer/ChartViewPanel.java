@@ -278,7 +278,10 @@ public class ChartViewPanel extends JPanel {
 		{
 			final XYPlot plot = chart.getXYPlot();
 	        ValueAxis axis = plot.getDomainAxis();
-	        axis.setRange(value, upperValue);
+	        if(value < upperValue)
+	        {
+	        	axis.setRange(value, upperValue);
+	        }
 		}
 	}
 

@@ -5,6 +5,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,6 +17,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -205,106 +210,144 @@ public class MainWnd extends JFrame {
 		            
 		            ftpClient.enterLocalPassiveMode();
                     ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+                    ftpClient.setAutodetectUTF8(true);
                     
 		            for(FileListBoxItem item : settingsData.getLogFileList())
 			        {
-		            	String strData = "";
 		            	ftpClient.setRestartOffset(item.position);
-	                    String remoteFile2 = item.fileFullPath;
-	                    //File downloadFile2 = new File(item.fileName);
-	                    //OutputStream outputStream2 = new BufferedOutputStream(new FileOutputStream(downloadFile2));
-	                    InputStream inputStream = ftpClient.retrieveFileStream(remoteFile2);
-	                    
+	                    String strTmpFile = "Data/" + item.fileName + ".tmp";
+	                    File fTmpFile = new File(strTmpFile);
+	                    OutputStream outputTmpStream = new BufferedOutputStream(new FileOutputStream(fTmpFile));
+	                    InputStream inputStream = ftpClient.retrieveFileStream(item.fileName);
+	                    	                    
 	                    byte[] bytesArray = new byte[4096];
 	                    int bytesRead = -1;
 	                    while(null != inputStream && (bytesRead = inputStream.read(bytesArray)) != -1) 
 	                    {
 	                    	item.position += bytesRead;
-	                        //outputStream2.write(bytesArray, 0, bytesRead);
-	                    	strData += new String(bytesArray);
+	                        outputTmpStream.write(bytesArray, 0, bytesRead);
+	                        
 	                    }
 	         
+	                    //ukonci stahovanie log suboru
 	                    boolean success = ftpClient.completePendingCommand();
 	                    if (success) 
 	                    {
-	                        System.out.println("File #2 has been downloaded successfully.");
+	                        System.out.println("File " + item.fileName + " has been downloaded successfully.");
 	                    }
-	                    //outputStream2.close();
+	                    
 	                    inputStream.close();    
-	                    
-	                    
-	                    String[] inputLines = strData.split(System.getProperty("line.separator"));	
-	                    List<String[]> cvsFileLines = new ArrayList<String[]>();
-	                    Path path = Paths.get("Data/" + item.fileName);
-	                    if (Files.notExists(path)) 
-	                    {
-		                       
-		                    String[] parsedLine = inputLines[0].split(";");
-		                    String strLine = "Date";
-		                    
-		                    for(Integer i = 2; i < parsedLine.length; ++i)
-		                    {
-		                    	//Teplota jedalen=25.6 C
-		                    	String[] strTmp = parsedLine[i].trim().split("=");
-		                    	if(strTmp.length == 2 && strTmp[1].split(" ").length == 2 && strTmp[1].trim().split(" ")[1].compareToIgnoreCase("C") == 0)
-		                    	{
-		                    		strLine += ";" + parsedLine[i].trim().split("=")[0];
-		                    	}
-		                    }
-		                    cvsFileLines.add(strLine.split(";"));
-	                    }
-	                    
-	                    for(Integer ii = 0; ii < inputLines.length; ++ii)
-	                    {
-	                    	String[] parsedLine = inputLines[ii].split(";");
-	                    	if(parsedLine.length <= 1)
-	                    	{
-	                    		continue;
-	                    	}
-		                    String strLine = parsedLine[0].trim() + "-" + parsedLine[1].trim();
-		                    
-		                    //SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-		                    //Date date = sdf.parse(parsedLine[0].trim() + " " + parsedLine[1].trim());
-		                    
-		                    for(Integer i = 2; i < parsedLine.length; ++i)
-		                    {
-		                    	//Teplota jedalen=25.6 C
-		                    	String[] strTmp = parsedLine[i].trim().split("=");
-		                    	if(strTmp.length == 2 && strTmp[1].split(" ").length == 2 && strTmp[1].trim().split(" ")[1].compareToIgnoreCase("C") == 0)
-		                    	{
-		                    		strLine += ";" + strTmp[1].trim().split(" ")[0];
-		                    	}
-		                    }
-		                    cvsFileLines.add(strLine.split(";"));
-	                    }
-	                    
-	                    CSVWriter writer = new CSVWriter(new FileWriter("Data/" + item.fileFullPath, true), ';');
-	                    writer.writeAll(cvsFileLines);
-	                    writer.close();
-	                             
-			        } 
+	                    outputTmpStream.close();
+	                } 
 		            
-		            ObjectOutputStream out;
-					out = new ObjectOutputStream(new FileOutputStream("Data/Settings.dat"));
-					out.writeObject(settingsData);  
-					out.close();
-						
 		            if (ftpClient.isConnected()) 
 		            {
 		            	ftpClient.logout();
 		            	ftpClient.disconnect();
 		            }
 		            
+		            ProcessDownloadedData();
+		            
+		            ObjectOutputStream out;
+					out = new ObjectOutputStream(new FileOutputStream("Data/Settings.dat"));
+					out.writeObject(settingsData);  
+					out.close();
+				
 				} catch (IOException ex) {
 					System.out.println("Oops! Something wrong happened");
 		            ex.printStackTrace();
 				}
-				/*catch (ParseException e1) 
-				{
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}*/
 			}
+
+			private void ProcessDownloadedData() throws IOException 
+			{
+				for(FileListBoxItem item : settingsData.getLogFileList())
+		        {
+					List<String[]> cvsFileLines = new ArrayList<String[]>();
+					
+					Boolean bCreateHeader = false;
+	                Path path = Paths.get("Data/" + item.fileName);
+	                if (Files.notExists(path)) 
+	                {
+	                	bCreateHeader = true;
+	                }
+	                 
+	                BufferedReader reader = null;
+	                try
+	                {
+						String strInputLine = null;
+						reader = new BufferedReader(new FileReader("Data/" + item.fileName + ".tmp"));
+						while(null != (strInputLine = reader.readLine()))
+						{
+							if(bCreateHeader) 
+			                {
+								String strHeader = "Date";   
+			                    String[] parsedLine = strInputLine.split(";");
+			                    		                    
+			                    for(int i = 2; i < parsedLine.length; ++i)
+			                    {
+			                    	String[] strTmp = parsedLine[i].trim().split("=");
+			                    	if(strTmp.length == 2 && strTmp[1].split(" ").length == 2 && strTmp[1].trim().split(" ")[1].compareToIgnoreCase("C") == 0)
+			                    	{
+			                    		strHeader += ";" + parsedLine[i].trim().split("=")[0];
+			                    	}
+			                    }
+			                    
+			                    cvsFileLines.add(strHeader.split(";"));
+			                    bCreateHeader = false;
+			                }
+							
+							String[] parsedLine = strInputLine.split(";");
+		                	if(parsedLine.length <= 1)
+		                	{
+		                		continue;
+		                	}
+		                	
+		                    String strLine = parsedLine[0].trim() + "-" + parsedLine[1].trim();
+		                    for(int i = 2; i < parsedLine.length; ++i)
+		                    {
+		                    	
+		                    	String[] strTmp = parsedLine[i].trim().split("=");
+		                    	if(strTmp.length == 2 && strTmp[1].split(" ").length == 2 && strTmp[1].trim().split(" ")[1].compareToIgnoreCase("C") == 0)
+		                    	{
+		                    		strLine += ";" + strTmp[1].trim().split(" ")[0];
+		                    	}
+		                    }
+		                    
+		                    cvsFileLines.add(strLine.split(";"));
+						}
+						reader.close();
+						
+						Path tmpFilePath = Paths.get("Data/" + item.fileName + ".tmp");
+						Files.delete(tmpFilePath);
+	                }
+	                catch(IOException e)
+	                {
+	                	System.out.println("Oops! Something wrong happened");
+			            e.printStackTrace();
+	                }
+	                					
+	                WriteCSVData("Data/" + item.fileFullPath, cvsFileLines);
+	            }
+			}
+			
+			private void WriteCSVData(String strFileFullPath, List<String[]> cvsFileLines)
+			{
+				CSVWriter writer;
+				try 
+				{
+					writer = new CSVWriter(new FileWriter(strFileFullPath, true), ';');
+					writer.writeAll(cvsFileLines);
+	                writer.close();
+	                
+	                cvsFileLines.clear();
+				}
+				catch (IOException e) 
+				{
+					e.printStackTrace();
+				}
+			}
+			
 		});
 		mnNewMenu.add(mntmUpdate);
 		
@@ -495,16 +538,18 @@ public class MainWnd extends JFrame {
 				{
 					DefaultMutableTreeNode tmpNode = new DefaultMutableTreeNode(new TreeUserObject(1, item.fileName));
 					//tmpNode.setUserObject(null);
-					CSVReader reader = new CSVReader(new FileReader("Data/" + item.fileName), ';');
-					String [] header = reader.readNext();
-				    reader.close();
-				    for(Integer i=1; i < header.length; ++i)
-				    {
-				    	DefaultMutableTreeNode tmpNode2 = new DefaultMutableTreeNode(new TreeUserObject(2, header[i]));
-				    	//tmpNode2.setUserObject(item.fileName);
-				    	tmpNode.add(tmpNode2);
-				    }
-				    
+					if(new File("Data/" + item.fileName).exists())
+					{	
+						CSVReader reader = new CSVReader(new FileReader("Data/" + item.fileName), ';');
+						String [] header = reader.readNext();
+					    reader.close();
+					    for(Integer i=1; i < header.length; ++i)
+					    {
+					    	DefaultMutableTreeNode tmpNode2 = new DefaultMutableTreeNode(new TreeUserObject(2, header[i]));
+					    	//tmpNode2.setUserObject(item.fileName);
+					    	tmpNode.add(tmpNode2);
+					    }
+					}
 			        root.add(tmpNode);
 			        
 				}
