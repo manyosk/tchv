@@ -182,6 +182,7 @@ public class MainWnd extends JFrame {
 				}
 				
 				ftpSettings.dispose();
+				FillTree();
 			}
 		});
 		mnNewMenu.add(mntmFtpSettings);
