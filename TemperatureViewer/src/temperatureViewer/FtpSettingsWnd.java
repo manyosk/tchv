@@ -55,6 +55,7 @@ class FtpSettingsWnd extends JDialog {
 	//Members
 	private final JPanel contentPanel = new JPanel();
 	private JCheckBox checkConnectionAutomaticallyChckbx;
+	private JCheckBox permitRestartDownloadChckbx;
 	private JTextField serverTextField;
 	private JTextField NameTextField;
 	private JPasswordField passwordField;
@@ -118,6 +119,14 @@ class FtpSettingsWnd extends JDialog {
 	{
 		checkConnectionAutomaticallyChckbx.setSelected(selected);
 	}
+	public boolean getPermitRestartDownloadChckbx() 
+	{
+		return permitRestartDownloadChckbx.isSelected();
+	}
+	public void setPermitRestartDownloadChckbx(boolean permitRestartDownloadChckbx) 
+	{
+		this.permitRestartDownloadChckbx.setSelected(permitRestartDownloadChckbx);
+	}
 	public List<FileListBoxItem> getLogFileList()
 	{
 		List<FileListBoxItem> logFileList = new ArrayList<FileListBoxItem>();
@@ -162,7 +171,7 @@ class FtpSettingsWnd extends JDialog {
 		setTitle("FTP Settings");
 		setResizable(false);
 		setLocationRelativeTo(owner);
-		setBounds(100, 100, 640, 326);
+		setBounds(100, 100, 640, 346);
 		getContentPane().setLayout(new BorderLayout());
 		contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
 		getContentPane().add(contentPanel, BorderLayout.CENTER);
@@ -174,17 +183,23 @@ class FtpSettingsWnd extends JDialog {
 		
 		JPanel selectLogFilesPanel = new JPanel();
 		selectLogFilesPanel.setBorder(new TitledBorder(null, "Selected log files", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		
+		permitRestartDownloadChckbx = new JCheckBox("Permit restart download");
 		GroupLayout gl_contentPanel = new GroupLayout(contentPanel);
 		gl_contentPanel.setHorizontalGroup(
 			gl_contentPanel.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_contentPanel.createSequentialGroup()
-					.addGap(10)
 					.addGroup(gl_contentPanel.createParallelGroup(Alignment.LEADING)
 						.addGroup(gl_contentPanel.createSequentialGroup()
+							.addGap(10)
+							.addGroup(gl_contentPanel.createParallelGroup(Alignment.LEADING)
+								.addComponent(permitRestartDownloadChckbx)
+								.addComponent(checkConnectionAutomaticallyChckbx)))
+						.addGroup(gl_contentPanel.createSequentialGroup()
+							.addContainerGap()
 							.addComponent(loginPanel, GroupLayout.PREFERRED_SIZE, 236, GroupLayout.PREFERRED_SIZE)
-							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(selectLogFilesPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-						.addComponent(checkConnectionAutomaticallyChckbx))
+							.addGap(6)
+							.addComponent(selectLogFilesPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
 					.addContainerGap(23, Short.MAX_VALUE))
 		);
 		gl_contentPanel.setVerticalGroup(
@@ -193,10 +208,12 @@ class FtpSettingsWnd extends JDialog {
 					.addGap(6)
 					.addComponent(checkConnectionAutomaticallyChckbx)
 					.addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(gl_contentPanel.createParallelGroup(Alignment.BASELINE, false)
+					.addComponent(permitRestartDownloadChckbx)
+					.addPreferredGap(ComponentPlacement.UNRELATED)
+					.addGroup(gl_contentPanel.createParallelGroup(Alignment.BASELINE)
 						.addComponent(loginPanel, GroupLayout.PREFERRED_SIZE, 212, GroupLayout.PREFERRED_SIZE)
 						.addComponent(selectLogFilesPanel, GroupLayout.PREFERRED_SIZE, 212, GroupLayout.PREFERRED_SIZE))
-					.addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+					.addGap(25))
 		);
 		
 		DefaultListModel<FileListBoxItem> listModel = new DefaultListModel<FileListBoxItem>();
@@ -428,6 +445,10 @@ class FtpSettingsWnd extends JDialog {
 				JButton okButton = new JButton("OK");
 				okButton.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent arg0) {
+						if(ftpClient != null && ftpClient.isConnected())
+						{
+							Disconnect();
+						}
 						
 						setActionCommand("OK");
 						setVisible(false);
@@ -441,6 +462,11 @@ class FtpSettingsWnd extends JDialog {
 				JButton cancelButton = new JButton("Cancel");
 				cancelButton.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent arg0) {
+						if(ftpClient != null && ftpClient.isConnected())
+						{
+							Disconnect();
+						}
+						
 						setActionCommand("Cancel");
 						setVisible(false);
 					}
@@ -451,20 +477,23 @@ class FtpSettingsWnd extends JDialog {
 		}
 	}
 	
-	private void TestConnection() {
+	private void TestConnection() 
+	{
+		this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		connectionStatusLbl.setText("...");
-		FTPClient ftpClient = new FTPClient();
-		try {
-			ftpClient.connect(getServerName());
-			int replyCode = ftpClient.getReplyCode();
+		FTPClient testFtpClient = new FTPClient();
+		try 
+		{
+			testFtpClient.connect(getServerName());
+			int replyCode = testFtpClient.getReplyCode();
             if (!FTPReply.isPositiveCompletion(replyCode)) {
                 System.out.println("Operation failed. Server reply code: " + replyCode);
                 connectionStatusLbl.setText("Fail!");
                 return;
             }
             
-            ftpClient.login(getUserName(), getOrigPassword());
-            replyCode = ftpClient.getReplyCode();
+            testFtpClient.login(getUserName(), getOrigPassword());
+            replyCode = testFtpClient.getReplyCode();
             if (!FTPReply.isPositiveCompletion(replyCode)) {
                 System.out.println("Operation failed. Server reply code: " + replyCode);
                 connectionStatusLbl.setText("Fail!");
@@ -472,36 +501,48 @@ class FtpSettingsWnd extends JDialog {
             }
             connectionStatusLbl.setText("Success");
             
-			ftpClient.logout();
-            ftpClient.disconnect();
-		} catch (IOException ex) {
+			testFtpClient.logout();
+            testFtpClient.disconnect();
+            testFtpClient = null;
+		} 
+		catch (IOException ex) 
+		{
 			connectionStatusLbl.setText("Fail!");
 			System.out.println("Oops! Something wrong happened");
             ex.printStackTrace();
 		}
+		finally
+		{
+			this.setCursor(Cursor.getDefaultCursor());
+		}
+		
 	}
 	
 	private void MakeConnection() 
 	{
 		this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-		if(ftpClient == null )
+		if(ftpClient == null)
 		{
 			ftpClient = new FTPClient();
 			try 
 			{
 				ftpClient.connect(getServerName());
 				int replyCode = ftpClient.getReplyCode();
-	            if (!FTPReply.isPositiveCompletion(replyCode)) {
+	            if (!FTPReply.isPositiveCompletion(replyCode)) 
+	            {
 	                System.out.println("Operation failed. Server reply code: " + replyCode);
 	                conectedLbl.setText("Disconnected");
+	                ftpClient = null;
 	                return;
 	            }
 	            
 	            ftpClient.login(getUserName(), getOrigPassword());
 	            replyCode = ftpClient.getReplyCode();
-	            if (!FTPReply.isPositiveCompletion(replyCode)) {
+	            if (!FTPReply.isPositiveCompletion(replyCode)) 
+	            {
 	                System.out.println("Operation failed. Server reply code: " + replyCode);
 	                conectedLbl.setText("Disconnected");
+	                ftpClient = null;
 	                return;
 	            }
 	            conectedLbl.setText("Connected");
@@ -523,7 +564,6 @@ class FtpSettingsWnd extends JDialog {
 		{
 			Disconnect();
 		}
-		this.setCursor(Cursor.getDefaultCursor());
 	}
 	
 	private void FillSourceListBox(String strPath) 

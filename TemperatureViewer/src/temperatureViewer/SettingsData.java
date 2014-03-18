@@ -10,6 +10,7 @@ public class SettingsData implements Serializable {
 	 */
 	private static final long serialVersionUID = -2028687321166811731L;
 	private boolean checkServerConnection = false;
+	private boolean permitRestDownload = false;
 	private String  server = "";
 	private String  userName = "";
 	private String  password = "";
@@ -45,6 +46,12 @@ public class SettingsData implements Serializable {
 	}
 	public void setLogFileList(List<FileListBoxItem> logFileList) {
 		this.logFileList = logFileList;
+	}
+	public boolean isPermitRestartDownload() {
+		return permitRestDownload;
+	}
+	public void setPermitRestDownload(boolean permitRestDownload) {
+		this.permitRestDownload = permitRestDownload;
 	}
 
 }

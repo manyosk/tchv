@@ -1,5 +1,6 @@
 package temperatureViewer;
 
+import java.awt.Cursor;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -153,6 +154,7 @@ public class MainWnd extends JFrame {
 				ftpSettings.setUserName(settingsData.getUserName());
 				ftpSettings.setPassword(settingsData.getPassword());
 				ftpSettings.setLogFileList(settingsData.getLogFileList());
+				ftpSettings.setPermitRestartDownloadChckbx(settingsData.isPermitRestartDownload());
 				ftpSettings.setVisible(true);
 				if(ftpSettings.getActionCommand().equalsIgnoreCase("OK"))
 				{
@@ -161,6 +163,7 @@ public class MainWnd extends JFrame {
 					settingsData.setServer(ftpSettings.getServerName());
 					settingsData.setPassword(ftpSettings.getPassword());
 					settingsData.setLogFileList(ftpSettings.getLogFileList());
+					settingsData.setPermitRestDownload(ftpSettings.getPermitRestartDownloadChckbx());
 					
 					ObjectOutputStream out;
 					try {
@@ -214,7 +217,10 @@ public class MainWnd extends JFrame {
                     
 		            for(FileListBoxItem item : settingsData.getLogFileList())
 			        {
-		            	ftpClient.setRestartOffset(item.position);
+		            	if(settingsData.isPermitRestartDownload() == true)
+		            	{
+		            		ftpClient.setRestartOffset(item.position);
+		            	}
 	                    String strTmpFile = "Data/" + item.fileName + ".tmp";
 	                    File fTmpFile = new File(strTmpFile);
 	                    OutputStream outputTmpStream = new BufferedOutputStream(new FileOutputStream(fTmpFile));
@@ -229,6 +235,11 @@ public class MainWnd extends JFrame {
 	                        
 	                    }
 	         
+	                    if(settingsData.isPermitRestartDownload() == false)
+		            	{
+	                    	item.position = 0;
+		            	}
+	                    
 	                    //ukonci stahovanie log suboru
 	                    boolean success = ftpClient.completePendingCommand();
 	                    if (success) 
@@ -267,7 +278,7 @@ public class MainWnd extends JFrame {
 					
 					Boolean bCreateHeader = false;
 	                Path path = Paths.get("Data/" + item.fileName);
-	                if (Files.notExists(path)) 
+	                if (Files.notExists(path) || settingsData.isPermitRestartDownload() == false) 
 	                {
 	                	bCreateHeader = true;
 	                }
@@ -336,7 +347,7 @@ public class MainWnd extends JFrame {
 				CSVWriter writer;
 				try 
 				{
-					writer = new CSVWriter(new FileWriter(strFileFullPath, true), ';');
+					writer = new CSVWriter(new FileWriter(strFileFullPath, settingsData.isPermitRestartDownload()), ';');
 					writer.writeAll(cvsFileLines);
 	                writer.close();
 	                
@@ -379,7 +390,7 @@ public class MainWnd extends JFrame {
 				try 
 				{
 					
-				
+					contentPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 					if(strLogFileName.isEmpty() || strCollumnName.isEmpty())
 					{
 						return;
@@ -412,7 +423,7 @@ public class MainWnd extends JFrame {
 					double dTmp = 0.0;
 					int    iCount = 0;
 					
-					TimeSeries pop = new TimeSeries("Population", org.jfree.data.time.Second.class);
+					TimeSeries pop = new TimeSeries(strCollumnName, org.jfree.data.time.Second.class);
 					csvFileLine = reader.readNext();
 					Date date = sdf.parse(csvFileLine[0].trim());
 					long lTime = (date.getTime() / 1000) - 1262300400;
@@ -458,7 +469,9 @@ public class MainWnd extends JFrame {
 					TimeSeriesCollection dataset = new TimeSeriesCollection();
 					dataset.addSeries(pop);
 					
-					chartViewPanel.DisplayChart(dataset);
+					String strChartName = strLogFileName.substring(0, strLogFileName.indexOf("."));
+					chartViewPanel.DisplayChart(strChartName, "Time", "Temperature", dataset);
+					contentPane.setCursor(Cursor.getDefaultCursor());
 				} 
 				/*catch (ParseException ee)
 				{

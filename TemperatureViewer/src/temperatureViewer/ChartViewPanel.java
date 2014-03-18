@@ -22,6 +22,7 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.time.TimeSeriesCollection;
 
 import java.awt.Color;
+import java.awt.Cursor;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -254,13 +255,14 @@ public class ChartViewPanel extends JPanel {
         rangeSlider.setPaintTicks(true);*/
 	}
 	
-	public void DisplayChart(TimeSeriesCollection dataset)
+	public void DisplayChart(String strChartName, String strXAxisName, String strYAxisName, TimeSeriesCollection dataset)
 	{
+		
 		chartPanel.removeAll();
 		chart = ChartFactory.createTimeSeriesChart(
-				 "Population of CSC408 Town",
-				 "Date", 
-				 "Population",
+				 strChartName,
+				 strXAxisName, 
+				 strYAxisName,
 				 dataset,
 				 true,
 				 true,
@@ -270,6 +272,7 @@ public class ChartViewPanel extends JPanel {
 		myChartPanel.setMouseWheelEnabled(true);
         chartPanel.add(myChartPanel,BorderLayout.CENTER);
         chartPanel.validate();
+        
 	}
 	
 	private void UpdateChart(long value, long upperValue) 
