@@ -535,6 +535,25 @@ public class MainWnd extends JFrame {
 					.addGap(1)
 					.addComponent(splitPane, GroupLayout.DEFAULT_SIZE, 489, Short.MAX_VALUE))
 		);
+		
+		JMenu mnSettings = new JMenu("Settings");
+		menuBar.add(mnSettings);
+		
+		JMenuItem mntmProperties = new JMenuItem("Properties");
+		mnSettings.add(mntmProperties);
+		
+		JMenu mnHelp = new JMenu("Help");
+		menuBar.add(mnHelp);
+		
+		JMenuItem mntmAbout = new JMenuItem("About");
+		mntmAbout.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				AboutDialog ftpSettings = new AboutDialog();
+				ftpSettings.setVisible(true);
+				ftpSettings.dispose();
+			}
+		});
+		mnHelp.add(mntmAbout);
 		contentPane.setLayout(gl_contentPane);
 	}
 
